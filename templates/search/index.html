@@ -1,0 +1,270 @@
+{% extends "layout.html" %}
+{% block title %}정비이력 스마트검색 시스템{% endblock %}
+
+{% block head_extra %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/search.css', v=asset_version) }}">
+{% endblock %}
+
+{% block content %}
+  <div class="page">
+    <header>
+      <h1 class="hero-title">정비이력 스마트검색 시스템</h1>
+      <p class="hero-subtitle">Equipment · Order 기반 통합 조회</p>
+    </header>
+
+    <section class="card">
+      {% if not data_available %}
+      <div class="empty-state">
+        데이터 파일을 찾을 수 없습니다. 경로와 파일명을 확인해주세요.
+      </div>
+      {% else %}
+      <form class="filters" method="get">
+        <div class="filter-grid">
+          <div class="field">
+            <label for="order_no">Order No</label>
+            <input id="order_no" name="order_no" type="text" value="{{ selections.order_no }}" placeholder="Order 번호 입력"
+              autocomplete="off" />
+          </div>
+          <div class="field">
+            <label for="equipment_no">Equipment No</label>
+            <input id="equipment_no" name="equipment_no" type="text" value="{{ selections.equipment_no }}"
+              placeholder="Equipment 번호 입력" autocomplete="off" />
+          </div>
+          <div class="field">
+            <label for="equipment_name">설비명</label>
+            <input id="equipment_name" name="equipment_name" type="text" value="{{ selections.equipment_name }}"
+              placeholder="설비명을 입력하세요" autocomplete="off" />
+          </div>
+        </div>
+
+        <div class="filter-grid filter-grid--spaced">
+          <div class="field">
+            <label for="top_category">설비 호기</label>
+            <select id="top_category" name="top_category">
+              {% for option in top_options %}
+              {% if option.startswith('─') %}
+              <option value="" disabled>{{ option }}</option>
+              {% else %}
+              <option value="{{ option }}" {% if option==selections.top_category %}selected{% endif %}>
+                {{ option if option else "전체" }}
+              </option>
+              {% endif %}
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label for="middle_category">작업반</label>
+            <select id="middle_category" name="middle_category">
+              {% for option in middle_options %}
+              <option value="{{ option }}" {% if option==selections.middle_category %}selected{% endif %}>
+                {{ option if option else "전체" }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label for="sub_category">설비종류</label>
+            <select id="sub_category" name="sub_category">
+              {% for option in sub_options %}
+              <option value="{{ option }}" {% if option==selections.sub_category %}selected{% endif %}>
+                {{ option if option else "전체" }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="toggle-field">
+          <input type="checkbox" id="with_links" name="with_links" value="1" {% if selections.with_links=='1'
+            %}checked{% endif %} />
+          <label for="with_links">첨부자료가 포함된 오더만 보기</label>
+        </div>
+
+        <div class="actions">
+          <button type="submit" class="primary-btn" name="search" value="1">검색</button>
+          <button type="button" class="reset-btn">초기화</button>
+          <button type="button" class="back-btn">뒤로가기</button>
+        </div>
+      </form>
+      {% endif %}
+    </section>
+
+    {% if show_results %}
+    <section class="card">
+      <div class="results-header">
+        <div class="results-title">
+          검색 결과
+          <span class="dataset-chip">{{ current_dataset_label }}</span>
+        </div>
+        <div class="results-controls">
+          <form class="results-inline-filters" method="get">
+            <input type="hidden" name="equipment_no" value="{{ selections.equipment_no }}">
+            <input type="hidden" name="order_no" value="{{ selections.order_no }}">
+            <input type="hidden" name="equipment_name" value="{{ selections.equipment_name }}">
+            <input type="hidden" name="top_category" value="{{ selections.top_category }}">
+            <input type="hidden" name="middle_category" value="{{ selections.middle_category }}">
+            <input type="hidden" name="sub_category" value="{{ selections.sub_category }}">
+            <input type="hidden" name="with_links" value="{{ selections.with_links }}">
+            <input type="hidden" name="search" value="1">
+            <input type="hidden" name="limit" value="{{ result_limit }}">
+            <div class="field">
+              <label for="detail_query_inline">자재/작업자 추가 검색</label>
+              <input id="detail_query_inline" name="detail_query" type="text" value="{{ selections.detail_query }}"
+                placeholder="자재 코드/설명 또는 작업자 이름" autocomplete="off" />
+            </div>
+            <button type="submit" class="inline-submit">추가 검색</button>
+          </form>
+          <div class="badge">
+            <span>표시</span>
+            <strong>{{ result_count }}</strong>
+            <span>/ 총 {{ total_results }}</span>
+          </div>
+          {% if export_results_url %}
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+              <input type="checkbox" id="export-all-columns" style="cursor: pointer;">
+              <span>모든 정보</span>
+            </label>
+            <a href="{{ export_results_url }}" id="export-btn" class="primary-btn primary-btn--compact">
+              검색결과 Excel 다운로드
+            </a>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if equipment_info %}
+
+      <div class="equipment-highlight">
+
+        <div class="equipment-highlight__text">
+
+          Equipment: {{ equipment_info.number }}{% if equipment_info.name %}, 설비명: {{ equipment_info.name }}{% endif %}
+
+        </div>
+
+      </div>
+
+      {% endif %}
+
+
+
+      {% if table_rows %}
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              {% for column_key, column_label in table_columns %}
+              {% set column_class = 'col-dataset' if column_key == 'dataset_label' else '' %}
+              <th class="{{ column_class }}">{{ column_label }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in table_rows %}
+            <tr>
+              {% for column_key, column_label in table_columns %}
+              {% set column_class = 'col-dataset' if column_key == 'dataset_label' else '' %}
+              <td class="{{ column_class }}">
+                {% set value = row[column_key] if column_key in row else '' %}
+                {% if column_key == 'order_no' and value %}
+                <a href="{{ url_for('search.order_detail', order_no=value) }}" target="_blank" rel="noopener noreferrer">
+                  {{ value }}
+                </a>
+                {% elif column_key == 'equipment' and value %}
+                <a href="{{ equipment_link_template.replace('EQUIPMENT_PLACEHOLDER', value) }}">{{ value }}</a>
+                {% elif column_key == 'confirm_text' %}
+                {{ value | replace('\n', '<br>') | safe if value else '-' }}
+                {% elif column_key == 'links' %}
+                {% if row.links %}
+                <div class="link-chips">
+                  {% for link in row.links %}
+                  <a class="link-chip" href="{{ link }}" target="_blank" rel="noopener noreferrer">첨부자료 {{
+                    loop.index
+                    }}</a>
+                  {% endfor %}
+                </div>
+                {% else %}
+                -
+                {% endif %}
+                {% elif column_key == 'details' %}
+                {% set detail_data = row.detail_payload or {} %}
+                {% set detail_long_text = detail_data.get('long_text', '') %}
+                {% set detail_materials = detail_data.get('materials', []) %}
+                {% set detail_work_details = detail_data.get('work_details', []) %}
+                {% set has_long_text = detail_long_text | trim | length > 0 %}
+                {% set materials_count = detail_materials | length %}
+                {% set work_details_count = detail_work_details | length %}
+                {% set has_materials = materials_count > 0 %}
+                {% set btn_class = 'detail-btn' + (' detail-btn--materials' if has_materials else '') %}
+                {% if has_long_text or has_materials or work_details_count > 0 %}
+                <button type="button" class="{{ btn_class }}" data-detail='{{ detail_data | tojson | e }}'>
+                  상세내역
+                </button>
+                {% else %}
+                -
+                {% endif %}
+                {% else %}
+                {{ value if value else '-' }}
+                {% endif %}
+              </td>
+              {% endfor %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if is_limited %}
+      <p class="notice">
+        결과가 많은 관계로 현재 {{ result_limit }}건까지만 우선 표시했습니다.
+      </p>
+      {% if load_more_url %}
+      <div class="load-more">
+        <a class="load-more-btn" href="{{ load_more_url }}">더보기 +</a>
+      </div>
+      {% endif %}
+      {% endif %}
+      {% else %}
+      <p class="empty-state">조건에 맞는 데이터가 없습니다. 검색 조건을 조정해 주세요.</p>
+      {% endif %}
+    </section>
+    {% endif %}
+  </div>
+
+  <div id="detail-modal" class="detail-modal" aria-hidden="true">
+    <div class="detail-modal__content" role="dialog" aria-modal="true" aria-labelledby="detail-modal-title">
+      <div class="detail-modal__header">
+        <div class="detail-modal__title-group">
+          <p class="detail-modal__eyebrow" id="detail-modal-dataset"></p>
+          <div class="detail-modal__title-row">
+            <h3 class="detail-modal__title" id="detail-modal-title">상세 정보</h3>
+            <a id="detail-modal-export-btn" class="detail-modal__export-btn" href="#" target="_blank">
+              Excel 다운로드
+            </a>
+          </div>
+        </div>
+        <button type="button" class="detail-modal__close" data-modal-close aria-label="닫기">&times;</button>
+      </div>
+      <div class="detail-modal__body">
+        <div class="detail-modal__section is-hidden" id="detail-modal-work-section">
+          <h4 class="detail-modal__section-title">작업 정보</h4>
+          <div class="detail-modal__work" id="detail-modal-work"></div>
+        </div>
+        <div class="detail-modal__section" id="detail-modal-longtext-section">
+          <h4 class="detail-modal__section-title">정비실적 Long Text</h4>
+          <div class="detail-modal__text" id="detail-modal-longtext"></div>
+          <div class="detail-modal__links" id="detail-modal-link-list"></div>
+        </div>
+        <div class="detail-modal__section" id="detail-modal-materials-section">
+          <h4 class="detail-modal__section-title">자재 정보</h4>
+          <div class="detail-modal__materials" id="detail-modal-materials"></div>
+        </div>
+        <p class="detail-modal__empty is-hidden" id="detail-modal-empty">상세 정보가 없습니다.</p>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  {{ super() }}
+  <script src="{{ url_for('static', filename='js/search.js', v=asset_version) }}" defer></script>
+{% endblock %}

@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}SAP Data Portal{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css', v=asset_version) }}">
+  {% block head_extra %}{% endblock %}
+  <script src="{{ url_for('static', filename='js/layout.js', v=asset_version) }}" defer></script>
+</head>
+<body>
+  {% from "components/sidebar.html" import render_sidebar %}
+  <div class="app-shell">
+    {{ render_sidebar(nav_active) }}
+    <main class="main">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

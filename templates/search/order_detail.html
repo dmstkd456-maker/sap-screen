@@ -1,0 +1,97 @@
+{% extends "layout.html" %}
+{% block title %}Order 정보{% endblock %}
+
+{% block head_extra %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/order_detail.css', v=asset_version) }}">
+{% endblock %}
+
+{% block content %}
+  <main class="order-page">
+    <div class="order-header">
+      <div>
+        <h1 class="title">Order 정보</h1>
+        <p class="order-number">Order #{{ order_no }}</p>
+      </div>
+      <a href="{{ url_for('search.export_order_excel', order_no=order_no) }}" class="download-btn">
+        Excel 다운로드
+      </a>
+    </div>
+    <p class="order-note">요청하신 주요 필드를 표 형식으로 정리했습니다.</p>
+    <section class="card">
+      {% if dataset_label %}
+      <div class="dataset-label">{{ dataset_label }}</div>
+      {% endif %}
+      <div class="info-grid">
+        {% for field in detail_fields %}
+        <div class="info-row">
+          <div class="info-label">{{ field.label }}</div>
+          <div class="info-value">{{ field.value if field.value else '-' }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    {% if work_details %}
+    <section class="card section-spaced">
+      <h2 class="section-title">작업 정보</h2>
+      <div class="table-box">
+        <table class="sheet-table">
+          <thead>
+            <tr>
+              <th>Start of Execution</th>
+              <th>작업자 이름</th>
+              <th>Actual Work</th>
+              <th>Unit</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in work_details %}
+            <tr>
+              <td>{{ item.start_of_execution or '-' }}</td>
+              <td>{{ item.worker_name or '-' }}</td>
+              <td>{{ item.actual_work or '-' }}</td>
+              <td>{{ item.work_unit or '-' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+    {% endif %}
+
+    {% if long_text %}
+    <section class="card section-spaced">
+      <h2 class="section-title">정비실적 Long Text</h2>
+      <div class="longtext">{{ long_text | replace('\n', '<br>') | safe }}</div>
+    </section>
+    {% endif %}
+
+    {% if materials %}
+    <section class="card section-spaced">
+      <h2 class="section-title">자재 정보</h2>
+      <div class="table-box">
+        <table class="sheet-table">
+          <thead>
+            <tr>
+              <th>Material</th>
+              <th>Description</th>
+              <th>Qty</th>
+              <th>UoM</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in materials %}
+            <tr>
+              <td>{{ item.material or '-' }}</td>
+              <td>{{ item.description or '-' }}</td>
+              <td>{{ item.qty or '-' }}</td>
+              <td>{{ item.uom or '-' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+    {% endif %}
+  </main>
+{% endblock %}

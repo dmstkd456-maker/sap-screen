@@ -1,0 +1,92 @@
+{% extends "layout.html" %}
+{% block title %}정비 대시보드{% endblock %}
+
+{% block head_extra %}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css', v=asset_version) }}">
+{% endblock %}
+
+{% block content %}
+  <div class="page">
+    <header class="dashboard-header">
+      <p class="dashboard-eyebrow">DASHBOARD</p>
+      <h1 class="dashboard-title">{{ view_title }}</h1>
+      <p class="dashboard-subtitle">호기/반 현황과 Damage 유형 트렌드를 한눈에 확인하세요.</p>
+    </header>
+
+    <div class="grid">
+      <section class="card">
+        <div class="card-header">
+          <h2 class="card-title">월간 건수 추이</h2>
+          <span class="badge">전체</span>
+        </div>
+        <canvas id="trendChart"></canvas>
+      </section>
+
+      <section class="card">
+        <div class="card-header">
+          <h2 class="card-title">Damage 유형별 건수</h2>
+          <span class="badge">월간</span>
+        </div>
+        <canvas id="damageChart"></canvas>
+      </section>
+
+      <section class="card card--square">
+        <div class="card-header">
+          <h2 class="card-title">호기별 건수 비율</h2>
+          <span class="badge">파이</span>
+        </div>
+        <div class="chart-area chart-area--square">
+          <canvas id="costCenterPie"></canvas>
+        </div>
+      </section>
+
+      <section class="card card--square">
+        <div class="card-header">
+          <h2 class="card-title">작업반 비율</h2>
+          <span class="badge">파이</span>
+        </div>
+        <div class="chart-area chart-area--square">
+          <canvas id="workctrPie"></canvas>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-header">
+          <h2 class="card-title">월별 비용 추이</h2>
+          <span class="badge">금액</span>
+        </div>
+        <canvas id="costChart"></canvas>
+      </section>
+
+      <section class="card">
+        <div class="card-header">
+          <h2 class="card-title">작업반별 Actual Work</h2>
+          <span class="badge">누적</span>
+        </div>
+        <canvas id="workctrTime"></canvas>
+      </section>
+
+      <section class="card card--tall">
+        <div class="card-header">
+          <h2 class="card-title">Equipment별 Damage 건수</h2>
+          <span class="badge">TOP</span>
+        </div>
+        <canvas id="equipmentDamage"></canvas>
+      </section>
+
+      <section class="card card--tall">
+        <div class="card-header">
+          <h2 class="card-title">호기별 진행상태</h2>
+          <span class="badge">완료/진행</span>
+        </div>
+        <canvas id="statusCost"></canvas>
+      </section>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script id="dashboard-data" type="application/json">{{ data | tojson }}</script>
+  <script src="{{ url_for('static', filename='js/dashboard.js', v=asset_version) }}" defer></script>
+{% endblock %}
