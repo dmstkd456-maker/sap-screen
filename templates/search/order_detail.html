@@ -12,9 +12,12 @@
         <h1 class="title">Order 정보</h1>
         <p class="order-number">Order #{{ order_no }}</p>
       </div>
-      <a href="{{ url_for('search.export_order_excel', order_no=order_no) }}" class="download-btn">
-        Excel 다운로드
-      </a>
+      <div class="order-actions">
+        <button type="button" class="back-btn" onclick="window.close()">닫기</button>
+        <a href="{{ url_for('search.export_order_excel', order_no=order_no) }}" class="download-btn">
+          Excel 다운로드
+        </a>
+      </div>
     </div>
     <p class="order-note">요청하신 주요 필드를 표 형식으로 정리했습니다.</p>
     <section class="card">
