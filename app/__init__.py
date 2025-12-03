@@ -1,8 +1,6 @@
 import os
 from pathlib import Path
 
-from dotenv import load_dotenv
-
 from flask import Flask
 
 from app.routes.search import search_bp
@@ -10,7 +8,13 @@ from app.routes.dashboard import dashboard_bp
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-load_dotenv(BASE_DIR / ".env")
+
+# Load dotenv if available
+try:
+    from dotenv import load_dotenv
+    load_dotenv(BASE_DIR / ".env")
+except ImportError:
+    pass
 
 
 def create_app() -> Flask:

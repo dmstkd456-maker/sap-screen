@@ -2,91 +2,263 @@
 {% block title %}정비 대시보드{% endblock %}
 
 {% block head_extra %}
-  <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css', v=asset_version) }}">
+<script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0" defer></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css', v=asset_version) }}">
 {% endblock %}
 
 {% block content %}
-  <div class="page">
-    <header class="dashboard-header">
-      <p class="dashboard-eyebrow">DASHBOARD</p>
-      <h1 class="dashboard-title">{{ view_title }}</h1>
-      <p class="dashboard-subtitle">호기/반 현황과 Damage 유형 트렌드를 한눈에 확인하세요.</p>
-    </header>
+<div class="page">
+  <header class="dashboard-header">
+    <p class="dashboard-eyebrow">DASHBOARD</p>
+    <h1 class="dashboard-title">{{ view_title }}</h1>
+    <p class="dashboard-subtitle">호기/반 현황과 Damage 유형 트렌드를 한눈에 확인하세요.</p>
+  </header>
 
-    <div class="grid">
-      <section class="card">
-        <div class="card-header">
-          <h2 class="card-title">월간 건수 추이</h2>
-          <span class="badge">전체</span>
-        </div>
-        <canvas id="trendChart"></canvas>
-      </section>
+  <!-- 전역 필터 제거됨 -->
 
-      <section class="card">
-        <div class="card-header">
-          <h2 class="card-title">Damage 유형별 건수</h2>
-          <span class="badge">월간</span>
+  <div class="grid">
+    {% if view_key %}
+    <!-- 작업반 대시보드: 호기별 정비 비율, 호기별 작업현황, 기간별 정비실적, 월별 비용 추이 -->
+    <section class="card card--square">
+      <div class="card-header">
+        <h2 class="card-title">호기별 정비 비율</h2>
+        <div class="chart-controls">
+          <select class="chart-start-year" data-chart="costCenterPie"></select>
+          <select class="chart-start-month" data-chart="costCenterPie"></select>
+          <span class="date-separator">~</span>
+          <select class="chart-end-year" data-chart="costCenterPie"></select>
+          <select class="chart-end-month" data-chart="costCenterPie"></select>
         </div>
-        <canvas id="damageChart"></canvas>
-      </section>
+      </div>
+      <div class="chart-area chart-area--square">
+        <canvas id="costCenterPie"></canvas>
+      </div>
+    </section>
 
-      <section class="card card--square">
-        <div class="card-header">
-          <h2 class="card-title">호기별 건수 비율</h2>
-          <span class="badge">파이</span>
+    <section class="card card--tall">
+      <div class="card-header">
+        <h2 class="card-title">호기별 작업현황</h2>
+        <div class="chart-controls">
+          <select class="chart-start-year" data-chart="statusCost"></select>
+          <select class="chart-start-month" data-chart="statusCost"></select>
+          <span class="date-separator">~</span>
+          <select class="chart-end-year" data-chart="statusCost"></select>
+          <select class="chart-end-month" data-chart="statusCost"></select>
         </div>
-        <div class="chart-area chart-area--square">
-          <canvas id="costCenterPie"></canvas>
-        </div>
-      </section>
+      </div>
+      <canvas id="statusCost"></canvas>
+    </section>
 
-      <section class="card card--square">
-        <div class="card-header">
-          <h2 class="card-title">작업반 비율</h2>
-          <span class="badge">파이</span>
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">기간별 정비실적</h2>
+        <div class="chart-controls">
+          <select class="chart-start-year" data-chart="damageChart"></select>
+          <select class="chart-start-month" data-chart="damageChart"></select>
+          <span class="date-separator">~</span>
+          <select class="chart-end-year" data-chart="damageChart"></select>
+          <select class="chart-end-month" data-chart="damageChart"></select>
         </div>
-        <div class="chart-area chart-area--square">
-          <canvas id="workctrPie"></canvas>
-        </div>
-      </section>
+      </div>
+      <canvas id="damageChart"></canvas>
+    </section>
 
-      <section class="card">
-        <div class="card-header">
-          <h2 class="card-title">월별 비용 추이</h2>
-          <span class="badge">금액</span>
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">직영/상주 Order 및 작업시간 비교</h2>
+        <div class="chart-controls">
+          <select class="chart-start-year" data-chart="workctrComparison"></select>
+          <select class="chart-start-month" data-chart="workctrComparison"></select>
+          <span class="date-separator">~</span>
+          <select class="chart-end-year" data-chart="workctrComparison"></select>
+          <select class="chart-end-month" data-chart="workctrComparison"></select>
         </div>
-        <canvas id="costChart"></canvas>
-      </section>
+      </div>
+      <div class="dual-donut-container">
+        <div class="dual-donut-item">
+          <h3 class="dual-donut-title">Order 건수</h3>
+          <canvas id="workctrComparisonOrder"></canvas>
+        </div>
+        <div class="dual-donut-item">
+          <h3 class="dual-donut-title">Actual Work (시간)</h3>
+          <canvas id="workctrComparisonWork"></canvas>
+        </div>
+      </div>
+    </section>
 
-      <section class="card">
-        <div class="card-header">
-          <h2 class="card-title">작업반별 Actual Work</h2>
-          <span class="badge">누적</span>
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">월별 비용 추이</h2>
+        <div class="chart-controls">
+          <select class="chart-cost-type" data-chart="costChart">
+            <option value="Total Cost">전체비용</option>
+            <option value="Labor Cost">인건비</option>
+            <option value="Material Cost">자재비</option>
+            <option value="Other Cost">기타</option>
+          </select>
+          <select class="chart-start-year" data-chart="costChart"></select>
+          <select class="chart-start-month" data-chart="costChart"></select>
+          <span class="date-separator">~</span>
+          <select class="chart-end-year" data-chart="costChart"></select>
+          <select class="chart-end-month" data-chart="costChart"></select>
         </div>
-        <canvas id="workctrTime"></canvas>
-      </section>
+      </div>
+      <canvas id="costChart"></canvas>
+    </section>
 
-      <section class="card card--tall">
-        <div class="card-header">
-          <h2 class="card-title">Equipment별 Damage 건수</h2>
-          <span class="badge">TOP</span>
+    <section class="card card--tall">
+      <div class="card-header">
+        <h2 class="card-title">호기별 정비비용</h2>
+        <div class="chart-controls">
+          <select class="chart-cost-type" data-chart="costByCenter">
+            <option value="Total Cost">전체비용</option>
+            <option value="Labor Cost">인건비</option>
+            <option value="Material Cost">자재비</option>
+            <option value="Other Cost">기타</option>
+          </select>
+          <select class="chart-start-year" data-chart="costByCenter"></select>
+          <select class="chart-start-month" data-chart="costByCenter"></select>
+          <span class="date-separator">~</span>
+          <select class="chart-end-year" data-chart="costByCenter"></select>
+          <select class="chart-end-month" data-chart="costByCenter"></select>
         </div>
-        <canvas id="equipmentDamage"></canvas>
-      </section>
+      </div>
+      <canvas id="costByCenter"></canvas>
+    </section>
+    {% else %}
+    <!-- 메인 대시보드: 모든 차트 표시 -->
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">월간 Order 건수</h2>
+        <div class="chart-controls">
+          <select class="chart-start-year" data-chart="trendChart"></select>
+          <select class="chart-start-month" data-chart="trendChart"></select>
+          <span class="date-separator">~</span>
+          <select class="chart-end-year" data-chart="trendChart"></select>
+          <select class="chart-end-month" data-chart="trendChart"></select>
+        </div>
+      </div>
+      <canvas id="trendChart"></canvas>
+    </section>
 
-      <section class="card card--tall">
-        <div class="card-header">
-          <h2 class="card-title">호기별 진행상태</h2>
-          <span class="badge">완료/진행</span>
+    <section class="card card--square">
+      <div class="card-header">
+        <h2 class="card-title">호기별 정비 비율</h2>
+        <div class="chart-controls">
+          <select class="chart-start-year" data-chart="costCenterPie"></select>
+          <select class="chart-start-month" data-chart="costCenterPie"></select>
+          <span class="date-separator">~</span>
+          <select class="chart-end-year" data-chart="costCenterPie"></select>
+          <select class="chart-end-month" data-chart="costCenterPie"></select>
         </div>
-        <canvas id="statusCost"></canvas>
-      </section>
-    </div>
+      </div>
+      <div class="chart-area chart-area--square">
+        <canvas id="costCenterPie"></canvas>
+      </div>
+    </section>
+    <!-- 메인 대시보드: 기존 레이아웃 유지 -->
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">기간별 정비실적</h2>
+        <div class="chart-controls">
+          <select class="chart-start-year" data-chart="damageChart"></select>
+          <select class="chart-start-month" data-chart="damageChart"></select>
+          <span class="date-separator">~</span>
+          <select class="chart-end-year" data-chart="damageChart"></select>
+          <select class="chart-end-month" data-chart="damageChart"></select>
+        </div>
+      </div>
+      <canvas id="damageChart"></canvas>
+    </section>
+
+    <section class="card card--square">
+      <div class="card-header">
+        <h2 class="card-title">작업반 비율</h2>
+        <div class="chart-controls">
+          <select class="chart-start-year" data-chart="workctrPie"></select>
+          <select class="chart-start-month" data-chart="workctrPie"></select>
+          <span class="date-separator">~</span>
+          <select class="chart-end-year" data-chart="workctrPie"></select>
+          <select class="chart-end-month" data-chart="workctrPie"></select>
+        </div>
+      </div>
+      <div class="chart-area chart-area--square">
+        <canvas id="workctrPie"></canvas>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">월별 비용 추이</h2>
+        <div class="chart-controls">
+          <select class="chart-cost-type" data-chart="costChart">
+            <option value="Total Cost">전체비용</option>
+            <option value="Labor Cost">인건비</option>
+            <option value="Material Cost">자재비</option>
+            <option value="Other Cost">기타</option>
+          </select>
+          <select class="chart-start-year" data-chart="costChart"></select>
+          <select class="chart-start-month" data-chart="costChart"></select>
+          <span class="date-separator">~</span>
+          <select class="chart-end-year" data-chart="costChart"></select>
+          <select class="chart-end-month" data-chart="costChart"></select>
+        </div>
+      </div>
+      <canvas id="costChart"></canvas>
+    </section>
+
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">반별 Order 건수</h2>
+        <div class="chart-controls">
+          <select class="chart-start-year" data-chart="workctrTime"></select>
+          <select class="chart-start-month" data-chart="workctrTime"></select>
+          <span class="date-separator">~</span>
+          <select class="chart-end-year" data-chart="workctrTime"></select>
+          <select class="chart-end-month" data-chart="workctrTime"></select>
+        </div>
+      </div>
+      <canvas id="workctrTime"></canvas>
+    </section>
+
+    <section class="card card--tall">
+      <div class="card-header">
+        <h2 class="card-title">Equipment별 고장이력</h2>
+        <div class="chart-controls">
+          <input type="text" class="equipment-search" id="equipmentSearch" placeholder="Equipment 번호 검색..."
+            value="1005504"
+            style="width: 150px; padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; margin-right: 8px;">
+          <select class="chart-start-year" data-chart="equipmentDamage"></select>
+          <select class="chart-start-month" data-chart="equipmentDamage"></select>
+          <span class="date-separator">~</span>
+          <select class="chart-end-year" data-chart="equipmentDamage"></select>
+          <select class="chart-end-month" data-chart="equipmentDamage"></select>
+        </div>
+      </div>
+      <canvas id="equipmentDamage"></canvas>
+    </section>
+
+    <section class="card card--tall">
+      <div class="card-header">
+        <h2 class="card-title">호기별 작업현황</h2>
+        <div class="chart-controls">
+          <select class="chart-start-year" data-chart="statusCost"></select>
+          <select class="chart-start-month" data-chart="statusCost"></select>
+          <span class="date-separator">~</span>
+          <select class="chart-end-year" data-chart="statusCost"></select>
+          <select class="chart-end-month" data-chart="statusCost"></select>
+        </div>
+      </div>
+      <canvas id="statusCost"></canvas>
+    </section>
+    {% endif %}
   </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
-  <script id="dashboard-data" type="application/json">{{ data | tojson }}</script>
-  <script src="{{ url_for('static', filename='js/dashboard.js', v=asset_version) }}" defer></script>
+<script id="dashboard-data" type="application/json">{{ data | tojson }}</script>
+<script id="dashboard-view" type="application/json">{{ view_key | tojson }}</script>
+<script src="{{ url_for('static', filename='js/dashboard.js', v=asset_version) }}" defer></script>
 {% endblock %}

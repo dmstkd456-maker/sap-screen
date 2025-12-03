@@ -97,7 +97,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (exportBtn) {
       if (data.order_no) {
         exportBtn.style.display = "inline-flex";
-        exportBtn.href = `/order/${data.order_no}/export_detail`;
+        exportBtn.href = `/order/${data.order_no}/export`;
       } else {
         exportBtn.style.display = "none";
         exportBtn.removeAttribute("href");
@@ -169,24 +169,4 @@ document.addEventListener("DOMContentLoaded", () => {
       closeModal();
     }
   });
-
-  // Handle export checkbox for "모든 정보"
-  const exportCheckbox = document.getElementById("export-all-columns");
-  const exportButton = document.getElementById("export-btn");
-
-  if (exportCheckbox && exportButton) {
-    const baseUrl = exportButton.getAttribute("href");
-
-    exportCheckbox.addEventListener("change", () => {
-      if (exportCheckbox.checked) {
-        // Add full_data=1 parameter to URL
-        const url = new URL(baseUrl, window.location.origin);
-        url.searchParams.set("full_data", "1");
-        exportButton.setAttribute("href", url.pathname + url.search);
-      } else {
-        // Reset to original URL
-        exportButton.setAttribute("href", baseUrl);
-      }
-    });
-  }
 });

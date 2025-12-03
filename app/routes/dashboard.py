@@ -62,6 +62,7 @@ def dashboard_page():
         "dashboard/dashboard.html",
         nav_active="dashboard_main",
         view_title="대시보드 메인",
+        view_key=None,
         data=payload,
     )
 
@@ -87,5 +88,6 @@ def dashboard_view(view: str):
         "dashboard/dashboard.html",
         nav_active=config["nav"],
         view_title=config["title"],
+        view_key=view,
         data=payload,
     )

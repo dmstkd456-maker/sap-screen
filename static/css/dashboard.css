@@ -103,7 +103,7 @@ canvas {
 
 .chart-area--square {
   position: relative;
-  width: min(100%, 520px);
+  width: min(100%, 364px);
   aspect-ratio: 1 / 1;
 }
 
@@ -113,4 +113,96 @@ canvas {
   margin: auto;
   width: 100% !important;
   height: 100% !important;
+}
+
+/* 차트 개별 필터 컨트롤 */
+.chart-controls {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.chart-start-year,
+.chart-start-month,
+.chart-end-year,
+.chart-end-month {
+  padding: 2px 4px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.chart-start-year:focus,
+.chart-start-month:focus,
+.chart-end-year:focus,
+.chart-end-month:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.date-separator {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  margin: 0 2px;
+}
+
+/* 이중 도넛 차트 컨테이너 */
+.dual-donut-container {
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.dual-donut-item {
+  flex: 1;
+  max-width: 280px;
+  text-align: center;
+}
+
+.dual-donut-title {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+
+.dual-donut-item canvas {
+  width: 100% !important;
+  height: auto !important;
+  max-height: 240px;
+}
+
+@media (max-width: 768px) {
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .chart-controls {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .chart-start-year,
+  .chart-start-month,
+  .chart-end-year,
+  .chart-end-month {
+    flex: 1;
+    min-width: 60px;
+  }
+
+  .dual-donut-container {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .dual-donut-item {
+    max-width: 100%;
+  }
 }

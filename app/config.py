@@ -1,13 +1,16 @@
 import os
 from pathlib import Path
-from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 ROOT_DIR = BASE_DIR
 DATA_DIR = ROOT_DIR / "data"
 
-# Load .env file BEFORE reading environment variables
-load_dotenv(ROOT_DIR / ".env")
+# Load .env file if dotenv is available
+try:
+    from dotenv import load_dotenv
+    load_dotenv(ROOT_DIR / ".env")
+except ImportError:
+    pass
 
 
 def _path_from_env(key: str, default: Path) -> Path:
@@ -23,8 +26,8 @@ def _path_from_env(key: str, default: Path) -> Path:
     return path
 
 
-# Shared dataset path (single CSV)
-SHARED_TOTAL_CSV = _path_from_env("SAP_TOTAL_DATA_PATH", DATA_DIR / "total_data.csv")
+# Shared dataset path (SQLite DB)
+SHARED_TOTAL_CSV = _path_from_env("SAP_TOTAL_DATA_PATH", DATA_DIR / "sap_data_4.db")
 
 # Screen dataset paths (default to shared file for both recent/legacy slots)
 SCREEN_DIR = _path_from_env("SAP_SCREEN_DIR", ROOT_DIR / "sap-screen")

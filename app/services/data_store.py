@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from dataclasses import dataclass
 
@@ -812,13 +812,13 @@ def _apply_filters(df: pd.DataFrame, selections: Dict[str, str]) -> pd.DataFrame
         material_match = filtered["Material"].astype(str).str.contains(detail_query, case=False, na=False)
         material_desc_match = filtered["Material Desc."].astype(str).str.contains(detail_query, case=False, na=False)
         worker_match = filtered["작업자 이름"].astype(str).str.contains(detail_query, case=False, na=False) if "작업자 이름" in filtered.columns else pd.Series([False] * len(filtered), index=filtered.index)
-        
+
         # Combine masks: row matches if ANY of the columns contain the query
         row_matches = material_match | material_desc_match | worker_match
-        
+
         # Get Order Nos that have at least one matching row
         matching_orders = filtered.loc[row_matches, "Order No"].unique()
-        
+
         # Filter to only include orders that have at least one matching row
         filtered = filtered[filtered["Order No"].isin(matching_orders)]
 
