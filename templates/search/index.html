@@ -178,26 +178,24 @@
                 {% if row.links %}
                 <div class="link-chips">
                   {% for link in row.links %}
-                  <a class="link-chip" href="{{ link }}" target="_blank" rel="noopener noreferrer">첨부자료 {{
-                    loop.index
-                    }}</a>
+                  {% set link_label = ('첨부자료 ' ~ loop.index) if row.links|length > 1 else '첨부자료' %}
+                  <a class="link-chip" href="{{ link }}" target="_blank" rel="noopener noreferrer">{{ link_label }}</a>
                   {% endfor %}
                 </div>
                 {% else %}
                 -
                 {% endif %}
                 {% elif column_key == 'details' %}
-                {% set detail_data = row.detail_payload or {} %}
-                {% set detail_long_text = detail_data.get('long_text', '') %}
-                {% set detail_materials = detail_data.get('materials', []) %}
-                {% set detail_work_details = detail_data.get('work_details', []) %}
-                {% set has_long_text = detail_long_text | trim | length > 0 %}
-                {% set materials_count = detail_materials | length %}
-                {% set work_details_count = detail_work_details | length %}
-                {% set has_materials = materials_count > 0 %}
+                {% set has_details = row.has_details %}
+                {% set has_materials = row.materials | length > 0 if row.materials is defined else false %}
                 {% set btn_class = 'detail-btn' + (' detail-btn--materials' if has_materials else '') %}
-                {% if has_long_text or has_materials or work_details_count > 0 %}
-                <button type="button" class="{{ btn_class }}" data-detail='{{ detail_data | tojson | e }}'>
+                {% if has_details %}
+                <button
+                  type="button"
+                  class="{{ btn_class }}"
+                  data-order-no="{{ row.order_no }}"
+                  data-dataset="{{ row.dataset_label }}"
+                >
                   상세내역
                 </button>
                 {% else %}

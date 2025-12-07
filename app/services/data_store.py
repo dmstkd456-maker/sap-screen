@@ -33,8 +33,12 @@ def _load_top_category_mappings() -> None:
     """Load top category (설비호기) mappings from top_category_mappings.json."""
     global _TOP_HIDDEN_CATEGORIES, _TOP_CATEGORY_INCLUDES
 
-    mappings_path = config.DATA_DIR / "top_category_mappings.json"
-    if not mappings_path.exists():
+    paths = [
+        config.DATA_DIR / "top_category_mappings.json",
+        config.DATA_DIR / "json" / "top_category_mappings.json",
+    ]
+    mappings_path = next((p for p in paths if p.exists()), None)
+    if not mappings_path:
         return
 
     try:
@@ -57,8 +61,13 @@ def _load_term_mappings() -> None:
     """Load term mappings from unit_mappings.json for bilingual search."""
     global _TERM_MAPPINGS, _REVERSE_MAPPINGS
 
-    mappings_path = config.DATA_DIR / "unit_mappings.json"
-    if not mappings_path.exists():
+    # 우선순위: data/unit_mappings.json -> data/json/unit_mappings.json
+    paths = [
+        config.DATA_DIR / "unit_mappings.json",
+        config.DATA_DIR / "json" / "unit_mappings.json",
+    ]
+    mappings_path = next((p for p in paths if p.exists()), None)
+    if not mappings_path:
         return
 
     try:
@@ -101,6 +110,19 @@ MIDDLE_CATEGORY_ALIASES = {
 MIDDLE_CATEGORY_ALIASES_NORMALIZED = {
     key.replace(" ", "").replace("-", "").replace("_", ""): value
     for key, value in MIDDLE_CATEGORY_ALIASES.items()
+}
+
+# DB 인코딩 깨진 컬럼명 매핑 (DB가 cp949로 저장되어 UTF-8로 읽을 때 깨짐)
+DB_COLUMN_MAPPINGS: Dict[str, str] = {
+    # 정비실적 관련
+    b'\xec\xa0\x95\xeb\xb9\x84\xec\x8b\xa4\xec\xa0\x81 short text'.decode('utf-8'): "정비실적 short text",
+    b'\xec\xa0\x95\xeb\xb9\x84\xec\x8b\xa4\xec\xa0\x81 long text'.decode('utf-8'): "정비실적 long text",
+    # 작업자 관련
+    b'\xec\x9e\x91\xec\x97\x85\xec\x9e\x90 \xec\x82\xac\xeb\xb2\x88'.decode('utf-8'): "작업자 사번",
+    b'\xec\x9e\x91\xec\x97\x85\xec\x9e\x90 \xec\x9d\xb4\xeb\xa6\x84'.decode('utf-8'): "작업자 이름",
+    # 정비요청 관련
+    b'\xec\xa0\x95\xeb\xb9\x84\xec\x9a\x94\xec\xb2\xad(\xec\x84\xb9\xec\x85\x98)'.decode('utf-8'): "정비요청(섹션)",
+    b'\xec\xa0\x95\xeb\xb9\x84\xec\x9a\x94\xec\xb2\xad(\xec\xa1\xb0)'.decode('utf-8'): "정비요청(조)",
 }
 
 COLUMN_ALIASES: Dict[str, str] = {
@@ -212,6 +234,13 @@ class DataStore:
 
 DATA_STORE: DataStore | None = None
 DATASET_MTIMES: Dict[str, float] = {}
+_CACHE_EPOCH: int = 0
+# Cache filtered index lookups to avoid recomputing heavy filters across identical queries
+_FILTER_CACHE: Dict[Tuple[int, int, Tuple[Tuple[str, str], ...]], pd.Index] = {}
+# Cache selected order numbers by filtered dataframe and limit
+_ORDER_SELECTION_CACHE: Dict[Tuple[int, int, int | None], List[str]] = {}
+# Cache built table rows by filtered dataframe and selected orders
+_TABLE_ROWS_CACHE: Dict[Tuple[int, int, Tuple[str, ...] | None], List[Dict[str, object]]] = {}
 
 
 def _resolve_limit(raw_value: str | None) -> int:
@@ -282,6 +311,13 @@ def _read_dataset(path: Path) -> pd.DataFrame:
             df = pd.read_sql_query("SELECT * FROM sap_reports", conn, dtype=str)
             conn.close()
             print(f"[data_store] Loaded {len(df)} rows from database")
+
+            # DB 컬럼명 매핑 적용 (인코딩 깨진 한글 컬럼명 수정)
+            if DB_COLUMN_MAPPINGS:
+                rename_map = {k: v for k, v in DB_COLUMN_MAPPINGS.items() if k in df.columns}
+                if rename_map:
+                    df.rename(columns=rename_map, inplace=True)
+                    print(f"[data_store] Renamed {len(rename_map)} columns: {list(rename_map.values())}")
         except Exception as exc:
             print(f"[data_store] ERROR reading database: {exc}")
             raise RuntimeError(f"Failed to read SQLite database {path}: {exc}")
@@ -400,6 +436,11 @@ def _add_alias_columns(df: pd.DataFrame) -> pd.DataFrame:
 def _select_order_numbers(
     filtered: pd.DataFrame, limit: int | None = None
 ) -> List[str]:
+    cache_key = (_CACHE_EPOCH, id(filtered), limit)
+    cached = _ORDER_SELECTION_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
+
     if filtered.empty:
         return []
 
@@ -477,7 +518,9 @@ def _select_order_numbers(
     else:
         combined = non_drawing_orders
 
-    return combined["Order No"].head(limit).tolist()
+    result = combined["Order No"].head(limit).tolist()
+    _ORDER_SELECTION_CACHE[cache_key] = result
+    return result
 
 
 def _initialize_data() -> DataStore:
@@ -645,7 +688,7 @@ def _initialize_data() -> DataStore:
 
 
 def _get_data_store() -> DataStore:
-    global DATA_STORE
+    global DATA_STORE, _CACHE_EPOCH
     current_mtimes = _capture_dataset_mtimes()
     needs_reload = DATA_STORE is None or any(
         DATASET_MTIMES.get(key) != mtime for key, mtime in current_mtimes.items()
@@ -655,6 +698,10 @@ def _get_data_store() -> DataStore:
         DATA_STORE = _initialize_data()
         DATASET_MTIMES.clear()
         DATASET_MTIMES.update(current_mtimes)
+        _CACHE_EPOCH += 1
+        _FILTER_CACHE.clear()
+        _ORDER_SELECTION_CACHE.clear()
+        _TABLE_ROWS_CACHE.clear()
     return DATA_STORE
 
 
@@ -748,6 +795,29 @@ def _contains_all_word_tokens(text_tokens: List[str], search_token_sets: List[Se
 
 
 def _apply_filters(df: pd.DataFrame, selections: Dict[str, str]) -> pd.DataFrame:
+    global _FILTER_CACHE
+
+    # Build a normalized cache key (cache respects dataset reloads via _CACHE_EPOCH)
+    key_fields = (
+        "equipment_no",
+        "order_no",
+        "equipment_name",
+        "top_category",
+        "middle_category",
+        "sub_category",
+        "with_links",
+        "detail_query",
+    )
+    normalized = tuple((k, (selections.get(k, "") or "").strip()) for k in key_fields)
+    cache_key = (_CACHE_EPOCH, id(df), normalized)
+
+    cached_index = _FILTER_CACHE.get(cache_key)
+    if cached_index is not None:
+        try:
+            return df.loc[cached_index]
+        except Exception:
+            pass
+
     filtered = df
 
     equipment_no = selections.get("equipment_no", "").strip()
@@ -764,25 +834,24 @@ def _apply_filters(df: pd.DataFrame, selections: Dict[str, str]) -> pd.DataFrame
 
     equipment_name = selections.get("equipment_name", "").strip()
     if equipment_name:
-        # Extract search tokens (independent words)
-        search_tokens = _extract_word_tokens(equipment_name)
+        # 간단 OR 매칭: 입력값 + 매핑 값(한/영)으로 Order Short Text, Equi. Text를 모두 contains 검색
+        base = unicodedata.normalize("NFC", equipment_name.lower())
+        names = set([base])
+        if equipment_name.lower() in _TERM_MAPPINGS:
+            names.add(unicodedata.normalize("NFC", _TERM_MAPPINGS[equipment_name.lower()]))
+        if equipment_name.lower() in _REVERSE_MAPPINGS:
+            names.add(unicodedata.normalize("NFC", _REVERSE_MAPPINGS[equipment_name.lower()]))
 
-        if search_tokens:
-            # Expand search tokens with bilingual mappings
-            search_token_sets = _expand_search_tokens_with_mappings(search_tokens)
-
-            # Extract word tokens from each field
-            order_short_tokens = filtered["Order Short Text"].apply(_extract_word_tokens)
-            equi_text_tokens = filtered["Equi. Text"].apply(_extract_word_tokens)
-
-            # Check if all search token sets have matches in either field
-            order_short_match = order_short_tokens.apply(
-                lambda tokens: _contains_all_word_tokens(tokens, search_token_sets)
-            )
-            equi_text_match = equi_text_tokens.apply(
-                lambda tokens: _contains_all_word_tokens(tokens, search_token_sets)
-            )
-            filtered = filtered[order_short_match | equi_text_match]
+        mask = False
+        for col in ["Order Short Text", "Equi. Text"]:
+            if col not in filtered.columns:
+                continue
+            series = filtered[col].fillna("").str.lower().apply(lambda x: unicodedata.normalize("NFC", x))
+            col_mask = False
+            for name in names:
+                col_mask |= series.str.contains(name, na=False, regex=False)
+            mask |= col_mask
+        filtered = filtered[mask]
 
     top_category = selections.get("top_category", "").strip()
     # Skip separator lines (they shouldn't be selectable, but just in case)
@@ -822,6 +891,8 @@ def _apply_filters(df: pd.DataFrame, selections: Dict[str, str]) -> pd.DataFrame
         # Filter to only include orders that have at least one matching row
         filtered = filtered[filtered["Order No"].isin(matching_orders)]
 
+    # Cache by index to avoid copying large DataFrame; index is stable per dataset epoch
+    _FILTER_CACHE[cache_key] = filtered.index
     return filtered
 
 
@@ -957,6 +1028,11 @@ def _build_table_rows(filtered: pd.DataFrame, selected_orders: List[str] | None 
     if filtered.empty:
         return []
 
+    cache_key = (_CACHE_EPOCH, id(filtered), tuple(selected_orders) if selected_orders is not None else None)
+    cached_rows = _TABLE_ROWS_CACHE.get(cache_key)
+    if cached_rows is not None:
+        return cached_rows
+
     if selected_orders is None:
         selected_orders = _select_order_numbers(filtered)
 
@@ -1026,6 +1102,8 @@ def _build_table_rows(filtered: pd.DataFrame, selected_orders: List[str] | None 
             "work_details": work_details,
         }
 
+        has_details = bool(long_text_combined or material_entries or work_details)
+
         rows.append(
             {
                 "dataset_label": work_date_label,
@@ -1040,10 +1118,12 @@ def _build_table_rows(filtered: pd.DataFrame, selected_orders: List[str] | None 
                 "links": long_links,
                 "long_text": long_text_combined,
                 MATERIAL_COLUMN_KEY: material_entries,
+                "has_details": has_details,
                 "detail_payload": detail_payload,
             }
         )
 
+    _TABLE_ROWS_CACHE[cache_key] = rows
     return rows
 
 
@@ -1200,3 +1280,4 @@ def format_excel_worksheet(worksheet, df: pd.DataFrame) -> None:
         for col_idx in range(1, len(df.columns) + 1):
             cell = worksheet.cell(row=row_idx, column=col_idx)
             cell.alignment = Alignment(wrap_text=True, vertical='top')
+import unicodedata

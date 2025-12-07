@@ -15,26 +15,26 @@
 }
 
 :root {
-  /* Shadcn Zinc Theme */
-  --background: #ffffff;
-  --foreground: #09090b;
+  /* Bright Blue Theme */
+  --background: #f5f9ff;
+  --foreground: #0f172a;
   --card: #ffffff;
-  --card-foreground: #09090b;
+  --card-foreground: #0f172a;
   --popover: #ffffff;
-  --popover-foreground: #09090b;
-  --primary: #18181b;
-  --primary-foreground: #fafafa;
-  --secondary: #f4f4f5;
-  --secondary-foreground: #18181b;
-  --muted: #f4f4f5;
-  --muted-foreground: #71717a;
-  --accent: #f4f4f5;
-  --accent-foreground: #18181b;
+  --popover-foreground: #0f172a;
+  --primary: #0b5cff;
+  --primary-foreground: #ffffff;
+  --secondary: #e7f0ff;
+  --secondary-foreground: #0f172a;
+  --muted: #e7ecf5;
+  --muted-foreground: #4b5563;
+  --accent: #dbe8ff;
+  --accent-foreground: #0f172a;
   --destructive: #ef4444;
-  --destructive-foreground: #fafafa;
-  --border: #e4e4e7;
-  --input: #e4e4e7;
-  --ring: #18181b;
+  --destructive-foreground: #ffffff;
+  --border: #d5e2ff;
+  --input: #d5e2ff;
+  --ring: #0b5cff;
   --radius: 0.5rem;
 }
 

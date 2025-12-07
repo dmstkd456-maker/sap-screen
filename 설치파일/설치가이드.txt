@@ -1,0 +1,89 @@
+========================================
+  SAP 데이터 포털 설치 가이드
+========================================
+
+【 필요한 프로그램 】
+
+1. Python 3.11 이상
+   - 다운로드: https://www.python.org/downloads/
+   - 설치 시 "Add Python to PATH" 체크 필수!
+
+2. Claude Code (Anthropic CLI)
+   - Node.js 먼저 설치: https://nodejs.org/
+   - 설치 후 명령 프롬프트에서: npm install -g @anthropic-ai/claude-code
+
+========================================
+
+【 설치 순서 】
+
+1단계: Python 설치
+   - python.org에서 Python 3.11 다운로드
+   - 설치할 때 "Add Python to PATH" 반드시 체크!
+   - 설치 완료 후 명령 프롬프트 열고 확인:
+     python --version
+
+2단계: 프로젝트 폴더 복사
+   - D:\유은상\test\sap-screen 폴더 전체를 새 PC로 복사
+   - 또는 원하는 경로에 복사
+
+3단계: 필요한 패키지 설치
+   - 명령 프롬프트(cmd) 열기
+   - 프로젝트 폴더로 이동:
+     cd D:\유은상\test\sap-screen
+   - 패키지 설치:
+     pip install -r requirements.txt
+
+4단계: 실행
+   - SAP포털실행.bat 더블클릭
+   - 또는 명령 프롬프트에서:
+     python app.py
+   - 브라우저에서 http://localhost:5001 접속
+
+========================================
+
+【 한 줄 명령어로 패키지 설치 】
+
+명령 프롬프트에 아래 한 줄 복사해서 붙여넣기:
+
+pip install flask pandas openpyxl python-dateutil
+
+========================================
+
+【 Claude Code 사용하기 】
+
+1. Node.js 설치 (https://nodejs.org/)
+2. 명령 프롬프트에서:
+   npm install -g @anthropic-ai/claude-code
+3. Claude Code 실행:
+   claude
+4. "설치해" 라고 말하면 자동 설치 진행
+
+========================================
+
+【 문제 해결 】
+
+Q: "python을 찾을 수 없습니다" 오류
+A: Python 설치 시 "Add Python to PATH" 체크 안 함
+   → Python 재설치하고 PATH 체크
+
+Q: "pip를 찾을 수 없습니다" 오류
+A: python -m pip install -r requirements.txt 로 실행
+
+Q: 데이터 파일 오류
+A: data 폴더에 sap_data_4.db 파일이 있는지 확인
+
+========================================
+
+【 폴더 구조 】
+
+sap-screen/
+├── app.py              (메인 실행 파일)
+├── requirements.txt    (필요 패키지 목록)
+├── SAP포털실행.bat     (더블클릭 실행용)
+├── app/                (Flask 앱 코드)
+├── templates/          (HTML 템플릿)
+├── static/             (CSS, JS 파일)
+└── data/               (데이터 파일)
+    └── sap_data_4.db   (SQLite 데이터베이스)
+
+========================================

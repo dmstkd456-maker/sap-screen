@@ -4,7 +4,7 @@ import io
 from typing import Dict, List
 
 import pandas as pd
-from flask import Blueprint, abort, render_template, request, send_file, url_for
+from flask import Blueprint, abort, jsonify, render_template, request, send_file, url_for
 
 from app.services import data_store as ds
 
@@ -86,7 +86,8 @@ def index():
         top_category="",
         sub_category="",
         equipment_no="EQUIPMENT_PLACEHOLDER",
-        with_links=selections.get("with_links", ""),
+        # Equipment 클릭 시에는 첨부자료 필터(with_links)를 초기화해 자동 체크를 해제
+        with_links="",
         search="1",
         limit=limit_value,
     )
@@ -218,6 +219,36 @@ def order_detail(order_no: str):
         materials=materials,
         work_details=work_details,
     )
+
+@search_bp.route("/api/order/<order_no>/detail")
+def order_detail_api(order_no: str):
+    store = ds._get_data_store()
+    combined = store.combined
+    target = (order_no or "").strip()
+
+    if not target or combined.empty:
+        abort(404)
+
+    mask = combined["Order No"].astype(str).str.strip() == target
+    if not mask.any():
+        abort(404)
+
+    filtered = combined[mask]
+    rows = ds._build_table_rows(filtered, [target])
+
+    if not rows:
+        abort(404)
+
+    row_data = rows[0]
+    detail_payload = row_data.get("detail_payload", {})
+
+    # Ensure required fields are present for the client
+    if "order_no" not in detail_payload:
+        detail_payload["order_no"] = target
+    if "dataset_label" not in detail_payload:
+        detail_payload["dataset_label"] = row_data.get("dataset_label", "")
+
+    return jsonify(detail_payload)
 
 
 @search_bp.route("/order/<order_no>/export")
@@ -373,6 +404,8 @@ def export_search_results():
     if filtered.empty:
         abort(404)
 
+    order_count = filtered["Order No"].nunique()
+
     # Check if full_data parameter is set
     full_data = request.args.get("full_data", "").strip() == "1"
 
@@ -380,7 +413,7 @@ def export_search_results():
         # Export all 54 columns from database directly
         try:
             # Get all order numbers (no limit for export)
-            all_orders = ds._select_order_numbers(filtered, limit=None)
+            all_orders = ds._select_order_numbers(filtered, limit=order_count)
 
             if not all_orders:
                 abort(404)
@@ -456,7 +489,7 @@ def export_search_results():
     else:
         # Normal export (formatted with work details, materials, etc.)
         # Get all order numbers (no limit for export)
-        all_orders = ds._select_order_numbers(filtered, limit=None)
+        all_orders = ds._select_order_numbers(filtered, limit=order_count)
         table_rows = ds._build_table_rows(filtered, all_orders)
 
         # Build flattened Excel data

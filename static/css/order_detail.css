@@ -145,16 +145,23 @@
 }
 
 .download-btn {
-  background: #2563eb;
-  color: white;
+  background: linear-gradient(135deg, #0b5cff, #2563eb);
+  color: #ffffff;
   text-decoration: none;
   padding: 10px 20px;
   border-radius: 12px;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 14px;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  box-shadow: 0 8px 16px rgba(11, 92, 255, 0.25);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.download-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(11, 92, 255, 0.3);
 }
 
 @media (max-width: 640px) {
